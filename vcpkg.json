@@ -1,0 +1,13 @@
+{
+    "name": "get-wet",
+    "version-string": "0.0.0",
+    "description": "Native extension for the mod Get Wet",
+    "homepage": "https://github.com/Ryan-rsm-McKenzie/CommonLibSSE",
+    "license": "MIT",
+    "dependencies": [
+      "boost-atomic",
+      "span-lite",
+      "spdlog",
+      "nlohmann-json"
+    ]
+  }
