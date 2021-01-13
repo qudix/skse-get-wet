@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.19)
 
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 set(VCPKG_TARGET_TRIPLET "x64-windows-static-md" CACHE STRING "")
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "")
 
 # ---- Project ----
 

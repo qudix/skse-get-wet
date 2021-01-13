@@ -15,8 +15,6 @@ namespace PapyrusSettings
 	{
 		auto settings = Settings::GetSingleton();
 		return {
-			settings->Get<float>("UpdateLoopFreq"),
-			settings->Get<float>("UpdateLoopRange"),
 			settings->Get<float>("VisualGlossinessMin"),
 			settings->Get<float>("VisualGlossinessMax"),
 			settings->Get<float>("VisualSpecularMin"),
@@ -28,6 +26,7 @@ namespace PapyrusSettings
 	{
 		auto settings = Settings::GetSingleton();
 		return {
+			settings->Get<bool>("ApplyGlobal"),
 			settings->Get<bool>("ApplyPlayer"),
 			settings->Get<bool>("ApplyNPC"),
 			settings->Get<bool>("ApplyFemale"),
@@ -84,7 +83,6 @@ namespace PapyrusSettings
 		a_vm->RegisterFunction("SetFloatSetting", CLASS_NAME, SetFloatSetting);
 		a_vm->RegisterFunction("SetBoolSetting", CLASS_NAME, SetBoolSetting);
 
-		//a_vm->RegisterFunction("GetActorIntSettings", CLASS_NAME, GetActorIntSettings);
 		return true;
 	}
 }

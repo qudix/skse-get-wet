@@ -1,57 +1,53 @@
 #pragma once
 
-#include "Util/Util.h"
-
 namespace Actor
 {
 	using BipedSlot = RE::BIPED_MODEL::BipedObjectSlot;
 
 	struct ActorProps
 	{
-		RE::Actor* m_Actor = nullptr;
+		RE::FormID m_ID = 0;
 		float m_GlossinessMin = 30;
 		float m_GlossinessMax = 30;
 		float m_SpecularMin = 3;
 		float m_SpecularMax = 3;
+
+		// TODO?
+		float m_Wetness = 0;
+		float m_WetnessRate = 0;
+		bool m_WetnessForced = false;
+
 		bool m_HasSettings = false;
 	};
 
-	std::vector<ActorProps> m_actorProps;
+	RE::TESQuest* m_quest = nullptr;
 
-	bool IsWithinRadius(RE::TESObjectREFR* a_centerObj, RE::TESObjectREFR* a_objRef, float a_radius)
-	{
-		if (!(a_radius > 0.0f))
-			return false;
-
-		RE::NiPoint3 a = a_centerObj->GetPosition();
-		RE::NiPoint3 b = a_objRef->GetPosition();
-
-		float tempx = std::abs(a.x - b.x);
-		float tempy = std::abs(a.y - b.y);
-		float tempz = std::abs(a.z - b.z);
-
-		if (tempx + tempy + tempz < a_radius)
-			return true; // very small distances
-		if (tempx + tempy + tempz > a_radius / 2)
-			return false; // very large distances
-
-		tempx = tempx * tempx;
-		tempy = tempy * tempy;
-		tempz = tempz * tempz;
-
-		float tempd = a_radius * a_radius;
-		if (tempx + tempy + tempz < tempd)
-			return true; // near but within distance
-
-		return false;
-	}
+	using ActorPropsPtr = std::shared_ptr<ActorProps>;
+	std::vector<ActorPropsPtr> m_actorProps;
 
 	bool IsValid(RE::Actor* a_actor)
 	{
-		auto settings = Settings::GetSingleton();
-
 		if (!a_actor || !a_actor->Is3DLoaded() || a_actor->IsDead())
 			return false;
+
+		if (!a_actor->formType.all(RE::FormType::ActorCharacter))
+			return false;
+
+		auto race = a_actor->GetRace();
+		if (race->data.flags.all(RE::RACE_DATA::Flag::kChild))
+			return false;
+
+		auto dobj = RE::BGSDefaultObjectManager::GetSingleton();
+		auto keywordNPC = dobj->GetObject<RE::BGSKeyword>(RE::DEFAULT_OBJECT::kKeywordNPC);
+		if (!a_actor->HasKeyword(keywordNPC))
+			return false;
+
+		return true;
+	}
+
+	bool IsValidProp(RE::Actor* a_actor)
+	{
+		auto settings = Settings::GetSingleton();
 
 		auto female = a_actor->GetActorBase()->IsFemale();
 		if (female && !settings->Get<bool>("ApplyFemale"))
@@ -68,10 +64,6 @@ namespace Actor
 			return false;
 
 		auto dobj = RE::BGSDefaultObjectManager::GetSingleton();
-		auto keywordNPC = dobj->GetObject<RE::BGSKeyword>(RE::DEFAULT_OBJECT::kKeywordNPC);
-		if (!a_actor->HasKeyword(keywordNPC))
-			return false;
-
 		auto keywordBeast = dobj->GetObject<RE::BGSKeyword>(RE::DEFAULT_OBJECT::kKeywordBeastRace);
 		bool beast = a_actor->HasKeyword(keywordBeast);
 		if (beast && !settings->Get<bool>("ApplyBeast"))
@@ -80,7 +72,7 @@ namespace Actor
 		return true;
 	}
 
-	void SetObjProperties(RE::NiAVObject* a_obj, ActorProps a_props, std::string a_glossiness, std::string a_specular)
+	void SetObjProperties(RE::NiAVObject* a_obj, ActorPropsPtr a_props, std::string a_glossiness, std::string a_specular)
 	{
 		using State = RE::BSGeometry::States;
 		using Feature = RE::BSShaderMaterial::Feature;
@@ -95,9 +87,9 @@ namespace Actor
 						if (type == Feature::kFaceGenRGBTint || type == Feature::kFaceGen) {
 							auto settings = Settings::GetSingleton();
 							if (settings->Get<bool>(a_glossiness))
-								material->specularPower = a_props.m_GlossinessMin;
+								material->specularPower = a_props->m_GlossinessMin;
 							if (settings->Get<bool>(a_specular))
-								material->specularColorScale = a_props.m_SpecularMin;
+								material->specularColorScale = a_props->m_SpecularMin;
 						}
 					}
 				}
@@ -106,9 +98,9 @@ namespace Actor
 		});
 	}
 
-	void SetHeadVisual(ActorProps a_props)
+	void SetHeadVisual(RE::Actor* a_actor, ActorPropsPtr a_props)
 	{
-		auto obj = a_props.m_Actor->GetHeadPartObject(RE::BGSHeadPart::HeadPartType::kFace);
+		auto obj = a_actor->GetHeadPartObject(RE::BGSHeadPart::HeadPartType::kFace);
 		if (obj) {
 			auto task = SKSE::GetTaskInterface();
 			task->AddTask([obj, a_props]() {
@@ -117,160 +109,124 @@ namespace Actor
 		}
 	}
 
-	void SetSlotVisual(ActorProps a_props, BipedSlot a_slot, std::string a_glossiness, std::string a_specular)
+	void SetSlotVisual(RE::Actor* a_actor, ActorPropsPtr a_props, BipedSlot a_slot, std::string a_glossiness, std::string a_specular)
 	{
-		auto actor = a_props.m_Actor;
-		auto skin = actor->GetSkin(a_slot);
+		auto skin = a_actor->GetSkin(a_slot);
 		if (!skin)
 			return;
 
-		auto addon = skin->GetArmorAddonByMask(actor->race, a_slot);
+		auto addon = skin->GetArmorAddonByMask(a_actor->race, a_slot);
 		if (!addon)
 			return;
 
-		auto obj = actor->VisitArmorAddon(skin, addon);
-		if (obj) {
-			auto task = SKSE::GetTaskInterface();
-			task->AddTask([obj, a_props, a_glossiness, a_specular]() {
-				SetObjProperties(obj, a_props, a_glossiness, a_specular);
-			});
-		}
-	}
-
-	json GetActorSettings(RE::Actor* a_actor)
-	{
-		auto actor_id = Util::GetFormString(a_actor);
-		auto settings = Settings::GetSingleton();
-		auto& actors = settings->Get("Actors");
-
-		for (auto& obj : actors) {
-			auto actor = obj.value("Actor", "");
-			if (!actor.empty() && actor == actor_id) {
-				return obj;
+		a_actor->VisitArmorAddon(skin, addon, [&](bool a_firstPerson, RE::NiAVObject* a_obj) {
+			if (!a_firstPerson || (a_firstPerson && a_actor->IsPlayerRef())) {
+				auto task = SKSE::GetTaskInterface();
+				task->AddTask([a_obj, a_props, a_glossiness, a_specular]() {
+					SetObjProperties(a_obj, a_props, a_glossiness, a_specular);
+				});
 			}
-		}
-
-		return {};
+		});
 	}
 
-	void SetActorSetting(RE::Actor* a_actor, std::string a_key, float a_value)
+	ActorPropsPtr GetProps(RE::Actor* a_actor)
 	{
-		auto actor_id = Util::GetFormString(a_actor);
-		auto settings = Settings::GetSingleton();
-		auto& actors = settings->Get("Actors");
+		auto it = std::find_if(m_actorProps.begin(), m_actorProps.end(), [&](ActorPropsPtr props) {
+			return a_actor == RE::TESObjectREFR::LookupByID<RE::Actor>(props->m_ID);
+		});
 
-		for (auto& [index, obj] : actors.items()) {
-			auto actor = obj.value("Actor", "");
-			if (!actor.empty() && actor == actor_id) {
-				obj[a_key] = a_value;
-				break;
-			}
-		}
+		if (it != m_actorProps.end())
+			return *it;
 
-		settings->Save();
+		return nullptr;
 	}
 
-	void AddActorSettings(RE::Actor* a_actor)
+	void RemoveProps(RE::Actor* a_actor)
 	{
-		auto actor_id = Util::GetFormString(a_actor);
-		auto settings = Settings::GetSingleton();
-		auto& actors = settings->Get("Actors");
-		auto obj = json::object();
-
-		obj["Actor"] = actor_id;
-		obj["VisualGlossinessMin"] = settings->Get<float>("VisualGlossinessMin");
-		obj["VisualGlossinessMax"] = settings->Get<float>("VisualGlossinessMax");
-		obj["VisualSpecularMin"] = settings->Get<float>("VisualSpecularMin");
-		obj["VisualSpecularMax"] = settings->Get<float>("VisualSpecularMax");
-
-		actors.push_back(obj);
-		settings->Save();
+		auto it = std::remove_if(m_actorProps.begin(), m_actorProps.end(), [&](ActorPropsPtr props) {
+			return a_actor == RE::TESObjectREFR::LookupByID<RE::Actor>(props->m_ID);
+		});
 	}
 
-	void RemoveActorSettings(RE::Actor* a_actor)
+	void SetVisuals(RE::Actor* a_actor, ActorPropsPtr a_props)
 	{
-		auto actor_id = Util::GetFormString(a_actor);
-		auto settings = Settings::GetSingleton();
-		auto& actors = settings->Get("Actors");
+		if (!a_actor || !a_props)
+			return;
 
-		int index = -1;
-		for (auto& it : actors.items()) {
-			auto actor = it.value().at("Actor").get<std::string>();
-			if (!actor.empty() && actor == actor_id) {
-				index = std::stoi(it.key());
-				break;
-			}
-		}
-
-		if (index != -1) {
-			actors.erase(index);
-			settings->Save();
-		}
+		SetHeadVisual(a_actor, a_props);
+		SetSlotVisual(a_actor, a_props, BipedSlot::kBody, "VisualGlossinessBody", "VisualSpecularBody");
+		SetSlotVisual(a_actor, a_props, BipedSlot::kHands, "VisualGlossinessHands", "VisualSpecularHands");
+		SetSlotVisual(a_actor, a_props, BipedSlot::kFeet, "VisualGlossinessFeet", "VisualSpecularFeet");
+		SetSlotVisual(a_actor, a_props, BipedSlot::kUnnamed52, "VisualGlossinessOther", "VisualSpecularOther");
 	}
 
-	void SetActor(RE::Actor* a_actor, bool a_running)
+	void UpdateActor(RE::Actor* a_actor)
 	{
+		if (!m_quest || !m_quest->IsRunning())
+			return;
+
 		if (!IsValid(a_actor))
 			return;
 
-		auto settings = Settings::GetSingleton();
-		auto set = GetActorSettings(a_actor);
-
-		ActorProps props;
-		props.m_Actor = a_actor;
-
-		if (!set.empty()) {
-			props.m_GlossinessMin = set["VisualGlossinessMin"].get<float>();
-			props.m_GlossinessMax = set["VisualGlossinessMax"].get<float>();
-			props.m_SpecularMin = set["VisualSpecularMin"].get<float>();
-			props.m_SpecularMax = set["VisualSpecularMax"].get<float>();
-			props.m_HasSettings = true;
-		} else {
-			props.m_GlossinessMin = settings->Get<float>("VisualGlossinessMin");
-			props.m_GlossinessMax = settings->Get<float>("VisualGlossinessMax");
-			props.m_SpecularMin = settings->Get<float>("VisualSpecularMin");
-			props.m_SpecularMax = settings->Get<float>("VisualSpecularMax");
+		if (!IsValidProp(a_actor)) {
+			RemoveProps(a_actor);
+			SetVisuals(a_actor, {});
+			return;
 		}
 
-		m_actorProps.push_back(props);
+		bool is_new = false;
+		auto props = GetProps(a_actor);
+		if (!props) {
+			props = std::make_shared<ActorProps>();
+			props->m_ID = a_actor->GetFormID();
+			is_new = true;
+		}
 
-		if (a_running) {
-			SetHeadVisual(props);
-			SetSlotVisual(props, BipedSlot::kBody, "VisualGlossinessBody", "VisualSpecularBody");
-			SetSlotVisual(props, BipedSlot::kHands, "VisualGlossinessHands", "VisualSpecularHands");
-			SetSlotVisual(props, BipedSlot::kFeet, "VisualGlossinessFeet", "VisualSpecularFeet");
-			SetSlotVisual(props, BipedSlot::kUnnamed52, "VisualGlossinessOther", "VisualSpecularOther");
+		auto settings = Settings::GetSingleton();
+		auto set = SettingsActor::GetActorSettings(a_actor);
+		if (!set.empty()) {
+			props->m_GlossinessMin = set["VisualGlossinessMin"].get<float>();
+			props->m_GlossinessMax = set["VisualGlossinessMax"].get<float>();
+			props->m_SpecularMin = set["VisualSpecularMin"].get<float>();
+			props->m_SpecularMax = set["VisualSpecularMax"].get<float>();
+			props->m_HasSettings = true;
+		} else {
+			props->m_GlossinessMin = settings->Get<float>("VisualGlossinessMin");
+			props->m_GlossinessMax = settings->Get<float>("VisualGlossinessMax");
+			props->m_SpecularMin = settings->Get<float>("VisualSpecularMin");
+			props->m_SpecularMax = settings->Get<float>("VisualSpecularMax");
+			props->m_HasSettings = false;
+		}
+
+		if (settings->Get<bool>("ApplyGlobal")) {
+			SetVisuals(a_actor, props);
+		}
+
+		if (is_new)
+			m_actorProps.push_back(std::move(props));
+	}
+
+	void Update()
+	{
+		if (!m_quest || !m_quest->IsRunning())
+			return;
+
+		for (auto& props : m_actorProps) {
+			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(props->m_ID);
+			if (actor) {
+				UpdateActor(actor);
+			}
 		}
 	}
 
-	void Update(bool a_running)
+	void Setup()
 	{
-		auto pl = RE::ProcessLists::GetSingleton();
 		auto player = RE::PlayerCharacter::GetSingleton();
-		if (!pl || !player)
-			return;
+		auto props = std::make_shared<ActorProps>();
+		props->m_ID = player->GetFormID();
+		m_actorProps.push_back(std::move(props));
 
-		m_actorProps.clear();
-
-		SetActor(player, a_running);
-
-		auto settings = Settings::GetSingleton();
-		auto range = settings->Get<float>("UpdateLoopRange");
-		for (auto handle : pl->highActorHandles) {
-			auto ptr = handle.get();
-			RE::Actor* actor = ptr.get();
-
-			if (!actor || !actor->formType.all(RE::FormType::ActorCharacter))
-				continue;
-
-			auto race = actor->GetRace();
-			if (race->data.flags.all(RE::RACE_DATA::Flag::kChild))
-				continue;
-
-			if (!IsWithinRadius(player, actor, range))
-				continue;
-
-			SetActor(actor, a_running);
-		}
+		auto handler = RE::TESDataHandler::GetSingleton();
+		m_quest = handler->LookupForm(RE::FormID(0x800), "qdx-get-wet.esp")->As<RE::TESQuest>();
 	}
 }

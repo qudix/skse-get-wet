@@ -1,9 +1,20 @@
-﻿#include "Papyrus/Papyrus.h"
+﻿#include "Settings/SettingsActor.h"
+#include "Actor.h"
+#include "Papyrus/Papyrus.h"
+#include "Event.h"
+
+void OnInit(SKSE::MessagingInterface::Message* a_msg)
+{
+	if (a_msg->type == SKSE::MessagingInterface::kDataLoaded) {
+		Actor::Setup();
+		Events::Register();
+	}
+}
 
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
 #ifndef NDEBUG
-	auto sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
+	auto sink = std::make_shared<logger::msvc_sink_mt>();
 #else
 	auto path = logger::log_directory();
 	if (!path) {
@@ -53,12 +64,18 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	SKSE::Init(a_skse);
 
 	if (!Settings::Load()) {
-		logger::error("Failed to load settings!");
+		logger::critical("Failed to load settings!"sv);
 		return false;
 	}
 
 	if (!Papyrus::Register()) {
-		logger::critical("Failed to register papyrus callback"sv);
+		logger::critical("Failed to register papyrus callback!"sv);
+		return false;
+	}
+
+	const auto messaging = SKSE::GetMessagingInterface();
+	if (!messaging->RegisterListener("SKSE", OnInit)) {
+		logger::critical("Failed to register messaging interface!"sv);
 		return false;
 	}
 
