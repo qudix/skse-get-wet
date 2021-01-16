@@ -66,23 +66,16 @@ namespace PapyrusSettings
 		settings->Save();
 	}
 
-	static constexpr char CLASS_NAME[] = "qdx_gw";
-
-	bool Register(VM* a_vm)
+	void Bind(VM& a_vm)
 	{
-		if (!a_vm) {
-			logger::critical("Papyrus Settings: Couldn't get VM");
-			return false;
-		}
+		const auto obj = "qdx_gw"sv;
 
-		a_vm->RegisterFunction("GetIntSettings", CLASS_NAME, GetIntSettings);
-		a_vm->RegisterFunction("GetFloatSettings", CLASS_NAME, GetFloatSettings);
-		a_vm->RegisterFunction("GetBoolSettings", CLASS_NAME, GetBoolSettings);
+		BIND(GetIntSettings);
+		BIND(GetFloatSettings);
+		BIND(GetBoolSettings);
 
-		a_vm->RegisterFunction("SetIntSetting", CLASS_NAME, SetIntSetting);
-		a_vm->RegisterFunction("SetFloatSetting", CLASS_NAME, SetFloatSetting);
-		a_vm->RegisterFunction("SetBoolSetting", CLASS_NAME, SetBoolSetting);
-
-		return true;
+		BIND(SetIntSetting);
+		BIND(SetFloatSetting);
+		BIND(SetBoolSetting);
 	}
 }

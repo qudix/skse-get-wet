@@ -1,13 +1,13 @@
 ﻿#include "Settings/SettingsActor.h"
-#include "Actor.h"
+#include "Game/Actor.h"
+#include "Game/Event.h"
 #include "Papyrus/Papyrus.h"
-#include "Event.h"
 
 void OnInit(SKSE::MessagingInterface::Message* a_msg)
 {
 	if (a_msg->type == SKSE::MessagingInterface::kDataLoaded) {
 		Actor::Setup();
-		Events::Register();
+		Event::Register();
 	}
 }
 
@@ -63,21 +63,14 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 
 	SKSE::Init(a_skse);
 
-	if (!Settings::Load()) {
-		logger::critical("Failed to load settings!"sv);
-		return false;
-	}
+	const auto settings = Settings::GetSingleton();
+	settings->Load();
 
-	if (!Papyrus::Register()) {
-		logger::critical("Failed to register papyrus callback!"sv);
-		return false;
-	}
+	const auto papyrus = SKSE::GetPapyrusInterface();
+	papyrus->Register(Papyrus::Bind);
 
 	const auto messaging = SKSE::GetMessagingInterface();
-	if (!messaging->RegisterListener("SKSE", OnInit)) {
-		logger::critical("Failed to register messaging interface!"sv);
-		return false;
-	}
+	messaging->RegisterListener("SKSE", OnInit);
 
 	return true;
 }

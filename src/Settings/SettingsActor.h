@@ -6,7 +6,7 @@ namespace SettingsActor
 {
 	json GetActorSettings(RE::Actor* a_actor)
 	{
-		auto actor_id = Util::GetFormString(a_actor);
+		auto actor_id = Util::FormToString(a_actor);
 		auto settings = Settings::GetSingleton();
 		auto& actors = settings->Get("Actors");
 
@@ -22,7 +22,7 @@ namespace SettingsActor
 
 	void SetActorSetting(RE::Actor* a_actor, std::string a_key, float a_value)
 	{
-		auto actor_id = Util::GetFormString(a_actor);
+		auto actor_id = Util::FormToString(a_actor);
 		auto settings = Settings::GetSingleton();
 		auto& actors = settings->Get("Actors");
 
@@ -30,16 +30,15 @@ namespace SettingsActor
 			auto actor = obj.value("Actor", "");
 			if (!actor.empty() && actor == actor_id) {
 				obj[a_key] = a_value;
+				settings->Save();
 				break;
 			}
 		}
-
-		settings->Save();
 	}
 
 	void AddActorSettings(RE::Actor* a_actor)
 	{
-		auto actor_id = Util::GetFormString(a_actor);
+		auto actor_id = Util::FormToString(a_actor);
 		auto settings = Settings::GetSingleton();
 		auto& actors = settings->Get("Actors");
 		auto obj = json::object();
@@ -56,7 +55,7 @@ namespace SettingsActor
 
 	void RemoveActorSettings(RE::Actor* a_actor)
 	{
-		auto actor_id = Util::GetFormString(a_actor);
+		auto actor_id = Util::FormToString(a_actor);
 		auto settings = Settings::GetSingleton();
 		auto& actors = settings->Get("Actors");
 

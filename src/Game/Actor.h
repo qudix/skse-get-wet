@@ -72,29 +72,39 @@ namespace Actor
 		return true;
 	}
 
-	void SetObjProperties(RE::NiAVObject* a_obj, ActorPropsPtr a_props, std::string a_glossiness, std::string a_specular)
+	void SetObjProperties(RE::NiAVObject* a_obj, ActorPropsPtr a_props, bool a_glossiness, bool a_specular)
 	{
-		using State = RE::BSGeometry::States;
-		using Feature = RE::BSShaderMaterial::Feature;
-		RE::BSVisit::TraverseScenegraphGeometries(a_obj, [&](RE::BSGeometry* a_geometry) -> RE::BSVisit::BSVisitControl {
-			auto effect = a_geometry->properties[State::kEffect].get();
-			if (effect) {
+		auto task = SKSE::GetTaskInterface();
+		task->AddTask([a_obj, a_props, a_glossiness, a_specular]() {
+			if (!a_obj)
+				return;
+
+			using State = RE::BSGeometry::States;
+			using Feature = RE::BSShaderMaterial::Feature;
+			using Visit = RE::BSVisit::BSVisitControl;
+			RE::BSVisit::TraverseScenegraphGeometries(a_obj, [&](RE::BSGeometry* a_geometry) {
+				auto effect = a_geometry->properties[State::kEffect].get();
+				if (!effect)
+					return Visit::kContinue;
+
 				auto lightingShader = netimmerse_cast<RE::BSLightingShaderProperty*>(effect);
-				if (lightingShader) {
-					auto material = static_cast<RE::BSLightingShaderMaterialBase*>(lightingShader->material);
-					if (material) {
-						auto type = material->GetFeature();
-						if (type == Feature::kFaceGenRGBTint || type == Feature::kFaceGen) {
-							auto settings = Settings::GetSingleton();
-							if (settings->Get<bool>(a_glossiness))
-								material->specularPower = a_props->m_GlossinessMin;
-							if (settings->Get<bool>(a_specular))
-								material->specularColorScale = a_props->m_SpecularMin;
-						}
-					}
+				if (!lightingShader)
+					return Visit::kContinue;
+
+				auto material = static_cast<RE::BSLightingShaderMaterialBase*>(lightingShader->material);
+				if (!material)
+					return Visit::kContinue;
+
+				auto type = material->GetFeature();
+				if (type == Feature::kFaceGenRGBTint || type == Feature::kFaceGen) {
+					if (a_glossiness)
+						material->specularPower = a_props->m_GlossinessMin;
+					if (a_specular)
+						material->specularColorScale = a_props->m_SpecularMin;
 				}
-			}
-			return RE::BSVisit::BSVisitControl::kContinue;
+
+				return Visit::kContinue;
+			});
 		});
 	}
 
@@ -102,10 +112,10 @@ namespace Actor
 	{
 		auto obj = a_actor->GetHeadPartObject(RE::BGSHeadPart::HeadPartType::kFace);
 		if (obj) {
-			auto task = SKSE::GetTaskInterface();
-			task->AddTask([obj, a_props]() {
-				SetObjProperties(obj, a_props, "VisualGlossinessHead", "VisualSpecularHead");
-			});
+			auto settings = Settings::GetSingleton();
+			bool glossiness = settings->Get<bool>("VisualGlossinessHead");
+			bool specular = settings->Get<bool>("VisualSpecularHead");
+			SetObjProperties(obj, a_props, glossiness, specular);
 		}
 	}
 
@@ -119,12 +129,14 @@ namespace Actor
 		if (!addon)
 			return;
 
-		a_actor->VisitArmorAddon(skin, addon, [&](bool a_firstPerson, RE::NiAVObject* a_obj) {
-			if (!a_firstPerson || (a_firstPerson && a_actor->IsPlayerRef())) {
-				auto task = SKSE::GetTaskInterface();
-				task->AddTask([a_obj, a_props, a_glossiness, a_specular]() {
-					SetObjProperties(a_obj, a_props, a_glossiness, a_specular);
-				});
+		bool isPlayer = a_actor->IsPlayerRef();
+		auto settings = Settings::GetSingleton();
+		bool glossiness = settings->Get<bool>(a_glossiness);
+		bool specular = settings->Get<bool>(a_specular);
+		a_actor->VisitArmorAddon(skin, addon, [&](bool a_firstPerson, RE::NiAVObject& a_obj) {
+			RE::NiAVObject* obj = &a_obj;
+			if (!a_firstPerson || (a_firstPerson && isPlayer)) {
+				SetObjProperties(obj, a_props, glossiness, specular);
 			}
 		});
 	}
@@ -160,7 +172,7 @@ namespace Actor
 		SetSlotVisual(a_actor, a_props, BipedSlot::kUnnamed52, "VisualGlossinessOther", "VisualSpecularOther");
 	}
 
-	void UpdateActor(RE::Actor* a_actor)
+	void UpdateActor([[maybe_unused]] RE::Actor* a_actor)
 	{
 		if (!m_quest || !m_quest->IsRunning())
 			return;
@@ -168,6 +180,7 @@ namespace Actor
 		if (!IsValid(a_actor))
 			return;
 
+		// TODO: check if stored formid is still the same
 		if (!IsValidProp(a_actor)) {
 			RemoveProps(a_actor);
 			SetVisuals(a_actor, {});
@@ -198,9 +211,8 @@ namespace Actor
 			props->m_HasSettings = false;
 		}
 
-		if (settings->Get<bool>("ApplyGlobal")) {
+		if (settings->Get<bool>("ApplyGlobal"))
 			SetVisuals(a_actor, props);
-		}
 
 		if (is_new)
 			m_actorProps.push_back(std::move(props));

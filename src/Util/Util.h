@@ -2,19 +2,6 @@
 
 namespace Util
 {
-	bool EndsWith(const std::string& str, const std::string& suffix)
-	{
-		return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
-	}
-
-	bool IsFormString(const std::string& a_str)
-	{
-		if (a_str.size() < 4 || a_str.find("|") == std::string::npos)
-			return false;
-
-		return EndsWith(a_str, ".esp") || EndsWith(a_str, ".esm") || EndsWith(a_str, ".esl");
-	}
-
 	uint32_t GetBaseID(RE::TESForm* a_form)
 	{
 		return a_form ? ((a_form->formID >> 24 == 0xFE) ? a_form->formID & 0x00000FFF : a_form->formID & 0x00FFFFFF) : 0;
@@ -22,7 +9,7 @@ namespace Util
 
 	uint32_t GetModIndex(RE::TESForm* a_form)
 	{
-		if (!a_form || a_form->formID == 0)
+		if (a_form->formID == 0)
 			return 0;
 
 		auto id = a_form->formID >> 24;
@@ -31,18 +18,24 @@ namespace Util
 
 		return id;
 	}
-
-	RE::TESForm* ParseFormString(std::string a_str)
+	/*
+	RE::TESForm* StringToForm(std::string a_str)
 	{
-		if (!IsFormString(a_str))
+		if (a_str.empty() || a_str.size() < 4)
 			return nullptr;
 
-		std::size_t pos = a_str.find("|");
-		std::string objID = a_str.substr(0, pos).c_str();
+		std::string_view str(a_str);
 
-		uint32_t obj = std::atoi(objID.c_str());;
+		auto pos = str.find('|');
+		if (pos == std::string_view::npos)
+			return nullptr;
 
-		std::string_view mod = a_str.substr(pos + 1);
+		auto ext = str.ends_with(".esp"sv) || str.ends_with(".esm"sv) || str.ends_with(".esl"sv);
+		if (!ext)
+			return nullptr;
+
+		std::string_view fid = str.substr(0, pos);
+		std::string_view mod = str.substr(pos + 1);
 		auto handler = RE::TESDataHandler::GetSingleton();
 		auto file = handler->LookupModByName(mod);
 
@@ -50,15 +43,16 @@ namespace Util
 		if (file)
 			index = file->GetPartialIndex();
 
+		uint32_t id = std::stoul(std::string(fid), nullptr, 0);
 		if (index < 0xFF)
-			obj = (index << 24) | obj;
+			id = (index << 24) | id;
 		else
-			obj = (index << 12) | (obj & 0x00000FFF);
+			id = (index << 12) | (id & 0x00000FFF);
 
-		return obj ? RE::TESForm::LookupByID(obj) : nullptr;
-	}
+		return id ? RE::TESForm::LookupByID(id) : nullptr;
+	}*/
 
-	std::string GetFormString(RE::TESForm* a_form)
+	std::string FormToString(RE::TESForm* a_form)
 	{
 		if (!a_form)
 			return "";

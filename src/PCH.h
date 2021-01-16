@@ -4,9 +4,11 @@
 #include "RE/Skyrim.h"
 
 #include <type_traits>
+#include <charconv>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
+
 using json = nlohmann::json;
 
 namespace WinAPI = SKSE::WinAPI;
@@ -51,11 +53,6 @@ namespace logger
 }
 
 using namespace std::literals;
-
-namespace logger
-{
-	using namespace SKSE::log;
-}
 
 #define DLLEXPORT __declspec(dllexport)
 

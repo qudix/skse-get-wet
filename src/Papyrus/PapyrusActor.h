@@ -3,8 +3,6 @@
 namespace PapyrusActor
 {
 	using VM = RE::BSScript::IVirtualMachine;
-	using StackID = RE::VMStackID;
-	using Severity = RE::BSScript::ErrorLogger::Severity;
 
 	void Update(RE::StaticFunctionTag*)
 	{
@@ -78,24 +76,17 @@ namespace PapyrusActor
 		SettingsActor::RemoveActorSettings(a_actor);
 	}
 
-	static constexpr char CLASS_NAME[] = "qdx_gw";
-
-	bool Register(VM* a_vm)
+	void Bind(VM& a_vm)
 	{
-		if (!a_vm) {
-			logger::critical("Papyrus Actor: Couldn't get VM");
-			return false;
-		}
+		const auto obj = "qdx_gw"sv;
 
-		a_vm->RegisterFunction("Update", CLASS_NAME, Update);
-		a_vm->RegisterFunction("UpdateActor", CLASS_NAME, UpdateActor);
-		a_vm->RegisterFunction("GetActorList", CLASS_NAME, GetActorList);
-		a_vm->RegisterFunction("GetActorNameList", CLASS_NAME, GetActorNameList);
-		a_vm->RegisterFunction("GetActorFloatSettings", CLASS_NAME, GetActorFloatSettings);
-		a_vm->RegisterFunction("SetActorFloatSetting", CLASS_NAME, SetActorFloatSetting);
-		a_vm->RegisterFunction("AddActorSettings", CLASS_NAME, AddActorSettings);
-		a_vm->RegisterFunction("RemoveActorSettings", CLASS_NAME, RemoveActorSettings);
-		
-		return true;
+		BIND(Update);
+		BIND(UpdateActor);
+		BIND(GetActorList);
+		BIND(GetActorNameList);
+		BIND(GetActorFloatSettings);
+		BIND(SetActorFloatSetting);
+		BIND(AddActorSettings);
+		BIND(RemoveActorSettings);
 	}
 }

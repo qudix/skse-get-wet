@@ -2,7 +2,7 @@
 
 namespace PapyrusUtil
 {
-    using VM = RE::BSScript::IVirtualMachine;
+	using VM = RE::BSScript::IVirtualMachine;
 
 	void PrintConsole(RE::StaticFunctionTag*, std::string a_message)
 	{
@@ -12,17 +12,10 @@ namespace PapyrusUtil
 		}
 	}
 
-	static constexpr char CLASS_NAME[] = "qdx_gw";
-
-	bool Register(VM* a_vm)
+	void Bind(VM& a_vm)
 	{
-		if (!a_vm) {
-			logger::critical("Papyrus Util: Couldn't get VM");
-			return false;
-		}
+		const auto obj = "qdx_gw"sv;
 
-		a_vm->RegisterFunction("PrintConsole", CLASS_NAME, PrintConsole);
-
-		return true;
+		BIND(PrintConsole);
 	}
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Events
+namespace Event
 {
 	using EventResult = RE::BSEventNotifyControl;
 
