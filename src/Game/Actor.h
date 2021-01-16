@@ -155,9 +155,12 @@ namespace Actor
 
 	void RemoveProps(RE::Actor* a_actor)
 	{
-		auto it = std::remove_if(m_actorProps.begin(), m_actorProps.end(), [&](ActorPropsPtr props) {
+		auto it = std::find_if(m_actorProps.begin(), m_actorProps.end(), [&](ActorPropsPtr props) {
 			return a_actor == RE::TESObjectREFR::LookupByID<RE::Actor>(props->m_ID);
 		});
+
+		if (it != m_actorProps.end())
+			m_actorProps.erase(it);
 	}
 
 	void SetVisuals(RE::Actor* a_actor, ActorPropsPtr a_props)
@@ -172,7 +175,14 @@ namespace Actor
 		SetSlotVisual(a_actor, a_props, BipedSlot::kUnnamed52, "VisualGlossinessOther", "VisualSpecularOther");
 	}
 
-	void UpdateActor([[maybe_unused]] RE::Actor* a_actor)
+	void ResetActor(RE::Actor* a_actor)
+	{
+		auto props = std::make_shared<ActorProps>();
+		RemoveProps(a_actor);
+		SetVisuals(a_actor, props);
+	}
+
+	void UpdateActor(RE::Actor* a_actor)
 	{
 		if (!m_quest || !m_quest->IsRunning())
 			return;
@@ -181,9 +191,9 @@ namespace Actor
 			return;
 
 		// TODO: check if stored formid is still the same
-		if (!IsValidProp(a_actor)) {
-			RemoveProps(a_actor);
-			SetVisuals(a_actor, {});
+		bool valid = IsValidProp(a_actor);
+		if (!valid) {
+			ResetActor(a_actor);
 			return;
 		}
 
@@ -223,21 +233,18 @@ namespace Actor
 		if (!m_quest || !m_quest->IsRunning())
 			return;
 
-		for (auto& props : m_actorProps) {
-			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(props->m_ID);
-			if (actor) {
-				UpdateActor(actor);
-			}
+		auto player = RE::PlayerCharacter::GetSingleton();
+		UpdateActor(player);
+
+		auto pl = RE::ProcessLists::GetSingleton();
+		for (auto& handle : pl->highActorHandles) {
+			auto actor = handle.get().get();
+			UpdateActor(actor);
 		}
 	}
 
 	void Setup()
 	{
-		auto player = RE::PlayerCharacter::GetSingleton();
-		auto props = std::make_shared<ActorProps>();
-		props->m_ID = player->GetFormID();
-		m_actorProps.push_back(std::move(props));
-
 		auto handler = RE::TESDataHandler::GetSingleton();
 		m_quest = handler->LookupForm(RE::FormID(0x800), "qdx-get-wet.esp")->As<RE::TESQuest>();
 	}

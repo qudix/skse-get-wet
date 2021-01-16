@@ -16,34 +16,44 @@ namespace PapyrusActor
 	
 	std::vector<RE::Actor*> GetActorList(RE::StaticFunctionTag*)
 	{
-		std::vector<RE::Actor*> a_vec;
+		std::vector<RE::Actor*> vec;
 
 		for (auto& props : Actor::m_actorProps) {
 			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(props->m_ID);
-			if (actor)
-				a_vec.push_back(actor);
+			if (actor) {
+				if (actor->IsPlayerRef())
+					vec.insert(vec.begin(), actor);
+				else
+					vec.push_back(actor);
+			}
 		}
-		return a_vec;
+
+		return vec;
 	}
 
 	std::vector<RE::BSFixedString> GetActorNameList(RE::StaticFunctionTag*)
 	{
-		std::vector<RE::BSFixedString> n_vec;
+		std::vector<RE::BSFixedString> vec;
 
 		for (auto& props : Actor::m_actorProps) {
 			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(props->m_ID);
-			if (actor)
-				n_vec.push_back(actor->GetName());
+			if (actor) {
+				auto name = actor->GetName();
+				if (actor->IsPlayerRef())
+					vec.insert(vec.begin(), name);
+				else
+					vec.push_back(name);
+			}
 		}
-		return n_vec;
+
+		return vec;
 	}
 
 	std::vector<float> GetActorFloatSettings(RE::StaticFunctionTag*, RE::Actor* a_actor)
 	{
-		if (!a_actor)
-			return {};
-
 		std::vector<float> vec;
+		if (!a_actor)
+			return vec;
 
 		for (auto& props : Actor::m_actorProps) {
 			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(props->m_ID);
