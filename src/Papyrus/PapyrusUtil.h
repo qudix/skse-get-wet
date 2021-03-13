@@ -1,10 +1,10 @@
 #pragma once
 
-namespace PapyrusUtil
+namespace Papyrus::PapyrusUtil
 {
 	using VM = RE::BSScript::IVirtualMachine;
 
-	void PrintConsole(RE::StaticFunctionTag*, std::string a_message)
+	inline void PrintConsole(RE::StaticFunctionTag*, std::string a_message)
 	{
 		const auto log = RE::ConsoleLog::GetSingleton();
 		if (log) {
@@ -12,7 +12,7 @@ namespace PapyrusUtil
 		}
 	}
 
-	void Bind(VM& a_vm)
+	inline void Bind(VM& a_vm)
 	{
 		const auto obj = "qdx_gw"sv;
 

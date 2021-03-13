@@ -1,6 +1,9 @@
-﻿#include "Settings/SettingsActor.h"
+#include "Util/Util.h"
+#include "Util/Data.h"
+#include "Game/ActorData.h"
 #include "Game/Actor.h"
 #include "Game/Event.h"
+#include "Util/Prop.h"
 #include "Papyrus/Papyrus.h"
 
 void OnInit(SKSE::MessagingInterface::Message* a_msg)
@@ -64,13 +67,16 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	SKSE::Init(a_skse);
 
 	const auto settings = Settings::GetSingleton();
-	settings->Load();
+	if (!settings->Load())
+		return false;
 
 	const auto papyrus = SKSE::GetPapyrusInterface();
 	papyrus->Register(Papyrus::Bind);
 
 	const auto messaging = SKSE::GetMessagingInterface();
 	messaging->RegisterListener("SKSE", OnInit);
+
+	Actor::RegisterSerial();
 
 	return true;
 }

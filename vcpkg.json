@@ -5,8 +5,7 @@
     "homepage": "https://github.com/Ryan-rsm-McKenzie/CommonLibSSE",
     "license": "MIT",
     "dependencies": [
-      "boost-atomic",
-      "span-lite",
+      "boost-stl-interfaces",
       "spdlog",
       "nlohmann-json"
     ]

@@ -18,6 +18,7 @@ namespace Util
 
 		return id;
 	}
+
 	/*
 	RE::TESForm* StringToForm(std::string a_str)
 	{
@@ -52,10 +53,10 @@ namespace Util
 		return id ? RE::TESForm::LookupByID(id) : nullptr;
 	}*/
 
-	std::string FormToString(RE::TESForm* a_form)
+	std::optional<std::string> FormToString(RE::TESForm* a_form)
 	{
 		if (!a_form)
-			return "";
+			return {};
 
 		std::stringstream ss;
 		ss << std::hex << GetBaseID(a_form) << "|";
@@ -72,4 +73,6 @@ namespace Util
 
 		return ss.str();
 	}
+
+
 }

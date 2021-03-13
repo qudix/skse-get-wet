@@ -1,251 +1,221 @@
 #pragma once
 
-namespace Actor
+namespace Actor 
 {
-	using BipedSlot = RE::BIPED_MODEL::BipedObjectSlot;
+	// Quest
+	RE::TESQuest* m_QuestMain = nullptr;
+	RE::TESQuest* m_QuestConfig = nullptr;
 
-	struct ActorProps
+	// Actor
+	RE::FormID m_LastFormID = 0;
+	ActorData* m_LastActorData = nullptr;
+	std::unordered_map<uint32_t, ActorData> m_ActorData;
+
+	ActorData& _GetActorData(RE::FormID a_formID)
 	{
-		RE::FormID m_ID = 0;
-		float m_GlossinessMin = 30;
-		float m_GlossinessMax = 30;
-		float m_SpecularMin = 3;
-		float m_SpecularMax = 3;
+		if (m_LastFormID == a_formID && m_LastActorData)
+			return *m_LastActorData;
 
-		// TODO?
-		float m_Wetness = 0;
-		float m_WetnessRate = 0;
-		bool m_WetnessForced = false;
+		// Will add actor data if it doesn't exist
+		auto& result = m_ActorData[a_formID];
+		m_LastFormID = a_formID;
+		m_LastActorData = &result;
+		result.SetFormID(a_formID);
+		return result;
+	}
 
-		bool m_HasSettings = false;
-	};
+	template <class T>
+	using optional_ref = std::optional<std::reference_wrapper<T>>;
 
-	RE::TESQuest* m_quest = nullptr;
-
-	using ActorPropsPtr = std::shared_ptr<ActorProps>;
-	std::vector<ActorPropsPtr> m_actorProps;
-
-	bool IsValid(RE::Actor* a_actor)
+	optional_ref<ActorData> GetActorData(RE::Actor& a_actor)
 	{
-		if (!a_actor || !a_actor->Is3DLoaded() || a_actor->IsDead())
+		return _GetActorData(a_actor.GetFormID());
+	}
+
+	bool IsValidActor(RE::Actor& a_actor)
+	{
+		if (!a_actor.Is3DLoaded() || a_actor.IsDead())
 			return false;
 
-		if (!a_actor->formType.all(RE::FormType::ActorCharacter))
+		if (!a_actor.formType.all(RE::FormType::ActorCharacter))
 			return false;
 
-		auto race = a_actor->GetRace();
+		auto race = a_actor.GetRace();
 		if (race->data.flags.all(RE::RACE_DATA::Flag::kChild))
 			return false;
 
 		auto dobj = RE::BGSDefaultObjectManager::GetSingleton();
 		auto keywordNPC = dobj->GetObject<RE::BGSKeyword>(RE::DEFAULT_OBJECT::kKeywordNPC);
-		if (!a_actor->HasKeyword(keywordNPC))
+		if (!a_actor.HasKeyword(keywordNPC))
 			return false;
 
 		return true;
 	}
 
-	bool IsValidProp(RE::Actor* a_actor)
+	bool IsValidEffect(RE::Actor& a_actor)
 	{
-		auto settings = Settings::GetSingleton();
+		auto set = Settings::GetSingleton();
+		auto& apply = set->data.Apply;
 
-		auto female = a_actor->GetActorBase()->IsFemale();
-		if (female && !settings->Get<bool>("ApplyFemale"))
+		auto female = a_actor.GetActorBase()->IsFemale();
+		if (female && apply.Female)
 			return false;
 
-		if (!female && !settings->Get<bool>("ApplyMale"))
+		if (!female && !apply.Male)
 			return false;
 
-		bool player = a_actor->IsPlayerRef();
-		if (player && !settings->Get<bool>("ApplyPlayer"))
+		bool player = a_actor.IsPlayerRef();
+		if (player && !apply.Player)
 			return false;
 
-		if (!player && !settings->Get<bool>("ApplyNPC"))
+		if (!player && !apply.NPC)
 			return false;
 
 		auto dobj = RE::BGSDefaultObjectManager::GetSingleton();
 		auto keywordBeast = dobj->GetObject<RE::BGSKeyword>(RE::DEFAULT_OBJECT::kKeywordBeastRace);
-		bool beast = a_actor->HasKeyword(keywordBeast);
-		if (beast && !settings->Get<bool>("ApplyBeast"))
+		bool beast = a_actor.HasKeyword(keywordBeast);
+		if (beast && !apply.Beast)
 			return false;
 
 		return true;
 	}
 
-	void SetObjProperties(RE::NiAVObject* a_obj, ActorPropsPtr a_props, bool a_glossiness, bool a_specular)
+	bool CleanActor(RE::Actor& a_actor)
 	{
-		auto task = SKSE::GetTaskInterface();
-		task->AddTask([a_obj, a_props, a_glossiness, a_specular]() {
-			if (!a_obj)
-				return;
-
-			using State = RE::BSGeometry::States;
-			using Feature = RE::BSShaderMaterial::Feature;
-			using Visit = RE::BSVisit::BSVisitControl;
-			RE::BSVisit::TraverseScenegraphGeometries(a_obj, [&](RE::BSGeometry* a_geometry) {
-				auto effect = a_geometry->properties[State::kEffect].get();
-				if (!effect)
-					return Visit::kContinue;
-
-				auto lightingShader = netimmerse_cast<RE::BSLightingShaderProperty*>(effect);
-				if (!lightingShader)
-					return Visit::kContinue;
-
-				auto material = static_cast<RE::BSLightingShaderMaterialBase*>(lightingShader->material);
-				if (!material)
-					return Visit::kContinue;
-
-				auto type = material->GetFeature();
-				if (type == Feature::kFaceGenRGBTint || type == Feature::kFaceGen) {
-					if (a_glossiness)
-						material->specularPower = a_props->m_GlossinessMin;
-					if (a_specular)
-						material->specularColorScale = a_props->m_SpecularMin;
-				}
-
-				return Visit::kContinue;
-			});
-		});
-	}
-
-	void SetHeadVisual(RE::Actor* a_actor, ActorPropsPtr a_props)
-	{
-		auto obj = a_actor->GetHeadPartObject(RE::BGSHeadPart::HeadPartType::kFace);
-		if (obj) {
-			auto settings = Settings::GetSingleton();
-			bool glossiness = settings->Get<bool>("VisualGlossinessHead");
-			bool specular = settings->Get<bool>("VisualSpecularHead");
-			SetObjProperties(obj, a_props, glossiness, specular);
-		}
-	}
-
-	void SetSlotVisual(RE::Actor* a_actor, ActorPropsPtr a_props, BipedSlot a_slot, std::string a_glossiness, std::string a_specular)
-	{
-		auto skin = a_actor->GetSkin(a_slot);
-		if (!skin)
-			return;
-
-		auto addon = skin->GetArmorAddonByMask(a_actor->race, a_slot);
-		if (!addon)
-			return;
-
-		bool isPlayer = a_actor->IsPlayerRef();
-		auto settings = Settings::GetSingleton();
-		bool glossiness = settings->Get<bool>(a_glossiness);
-		bool specular = settings->Get<bool>(a_specular);
-		a_actor->VisitArmorAddon(skin, addon, [&](bool a_firstPerson, RE::NiAVObject& a_obj) {
-			RE::NiAVObject* obj = &a_obj;
-			if (!a_firstPerson || (a_firstPerson && isPlayer)) {
-				SetObjProperties(obj, a_props, glossiness, specular);
-			}
-		});
-	}
-
-	ActorPropsPtr GetProps(RE::Actor* a_actor)
-	{
-		auto it = std::find_if(m_actorProps.begin(), m_actorProps.end(), [&](ActorPropsPtr props) {
-			return a_actor == RE::TESObjectREFR::LookupByID<RE::Actor>(props->m_ID);
-		});
-
-		if (it != m_actorProps.end())
-			return *it;
-
-		return nullptr;
-	}
-
-	void RemoveProps(RE::Actor* a_actor)
-	{
-		auto it = std::find_if(m_actorProps.begin(), m_actorProps.end(), [&](ActorPropsPtr props) {
-			return a_actor == RE::TESObjectREFR::LookupByID<RE::Actor>(props->m_ID);
-		});
-
-		if (it != m_actorProps.end())
-			m_actorProps.erase(it);
-	}
-
-	void SetVisuals(RE::Actor* a_actor, ActorPropsPtr a_props)
-	{
-		if (!a_actor || !a_props)
-			return;
-
-		SetHeadVisual(a_actor, a_props);
-		SetSlotVisual(a_actor, a_props, BipedSlot::kBody, "VisualGlossinessBody", "VisualSpecularBody");
-		SetSlotVisual(a_actor, a_props, BipedSlot::kHands, "VisualGlossinessHands", "VisualSpecularHands");
-		SetSlotVisual(a_actor, a_props, BipedSlot::kFeet, "VisualGlossinessFeet", "VisualSpecularFeet");
-		SetSlotVisual(a_actor, a_props, BipedSlot::kUnnamed52, "VisualGlossinessOther", "VisualSpecularOther");
-	}
-
-	void ResetActor(RE::Actor* a_actor)
-	{
-		auto props = std::make_shared<ActorProps>();
-		RemoveProps(a_actor);
-		SetVisuals(a_actor, props);
-	}
-
-	void UpdateActor(RE::Actor* a_actor)
-	{
-		if (!m_quest || !m_quest->IsRunning())
-			return;
-
-		if (!IsValid(a_actor))
-			return;
-
-		// TODO: check if stored formid is still the same
-		bool valid = IsValidProp(a_actor);
+		auto valid = IsValidEffect(a_actor);
 		if (!valid) {
-			ResetActor(a_actor);
+			auto formID = a_actor.GetFormID();
+			auto data = m_ActorData.find(formID);
+			if (data != m_ActorData.end()) {
+				data->second.Reset();
+				m_ActorData.erase(data);
+				return false;
+			}
+		}
+
+		return valid;
+	}
+
+	void UpdateActor(RE::Actor& a_actor, bool a_force = false)
+	{
+		if (!m_QuestMain || !m_QuestMain->IsRunning())
 			return;
+
+		bool valid = IsValidActor(a_actor);
+		if (!valid)
+			return;
+
+		bool clean = CleanActor(a_actor);
+		if (!clean)
+			return;
+
+		auto set = Settings::GetSingleton();
+		auto global = set->data.Apply.Global;
+		if (global || a_force) {
+			auto opt = GetActorData(a_actor);
+			if (opt) {
+				auto& data = opt.value().get();
+				data.Update();
+			}
 		}
-
-		bool is_new = false;
-		auto props = GetProps(a_actor);
-		if (!props) {
-			props = std::make_shared<ActorProps>();
-			props->m_ID = a_actor->GetFormID();
-			is_new = true;
-		}
-
-		auto settings = Settings::GetSingleton();
-		auto set = SettingsActor::GetActorSettings(a_actor);
-		if (!set.empty()) {
-			props->m_GlossinessMin = set["VisualGlossinessMin"].get<float>();
-			props->m_GlossinessMax = set["VisualGlossinessMax"].get<float>();
-			props->m_SpecularMin = set["VisualSpecularMin"].get<float>();
-			props->m_SpecularMax = set["VisualSpecularMax"].get<float>();
-			props->m_HasSettings = true;
-		} else {
-			props->m_GlossinessMin = settings->Get<float>("VisualGlossinessMin");
-			props->m_GlossinessMax = settings->Get<float>("VisualGlossinessMax");
-			props->m_SpecularMin = settings->Get<float>("VisualSpecularMin");
-			props->m_SpecularMax = settings->Get<float>("VisualSpecularMax");
-			props->m_HasSettings = false;
-		}
-
-		if (settings->Get<bool>("ApplyGlobal"))
-			SetVisuals(a_actor, props);
-
-		if (is_new)
-			m_actorProps.push_back(std::move(props));
 	}
 
 	void Update()
 	{
-		if (!m_quest || !m_quest->IsRunning())
+		if (!m_QuestMain || !m_QuestMain->IsRunning())
 			return;
 
 		auto player = RE::PlayerCharacter::GetSingleton();
-		UpdateActor(player);
+		if (player)
+			UpdateActor(*player);
 
 		auto pl = RE::ProcessLists::GetSingleton();
 		for (auto& handle : pl->highActorHandles) {
 			auto actor = handle.get().get();
-			UpdateActor(actor);
+			if (actor)
+				UpdateActor(*actor);
+		}
+	}
+
+	constexpr uint32_t DataVersion = 1;
+
+	void SerialRevert(SKSE::SerializationInterface*)
+	{
+		m_LastFormID = 0;
+		m_LastActorData = nullptr;
+		m_ActorData.clear();
+
+		// Do Locking?
+	}
+
+	void SerialLoad(SKSE::SerializationInterface* intfc)
+	{
+		uint32_t type;
+		uint32_t version;
+		uint32_t length;
+		bool error = false;
+
+		while (!error && intfc->GetNextRecordInfo(type, version, length)) {
+			if (type != 'DATA') {
+				logger::critical("Unknown type!");
+				error = true;
+				continue;
+			}
+
+			if (version != DataVersion)
+				continue;
+
+			auto count = Data::ReadHelper<uint32_t>(intfc, length);
+			for (uint32_t i = 0; i < count; ++i) {
+				auto formID = Data::ReadHelper<uint32_t>(intfc, length);
+				ActorData data(intfc, length);
+
+				uint32_t newFormID;
+				if (!intfc->ResolveFormID(formID, newFormID))
+					continue;
+
+				data.SetFormID(newFormID);
+				m_ActorData[newFormID] = std::move(data);
+			}
+		}
+
+		if (error)
+			logger::critical("Error while loading data");
+	}
+
+	void SerialSave(SKSE::SerializationInterface* intfc)
+	{
+		auto record = intfc->OpenRecord('DATA', DataVersion);
+		if (record) {
+			auto count = static_cast<uint32_t>(m_ActorData.size());
+			Data::Write(intfc, &count);
+			for (auto const& entry : m_ActorData) {
+				uint32_t formID = entry.first;
+				auto const& data = entry.second;
+				Data::Write(intfc, &formID);
+				data.Serialize(intfc);
+			}
 		}
 	}
 
 	void Setup()
 	{
 		auto handler = RE::TESDataHandler::GetSingleton();
-		m_quest = handler->LookupForm(RE::FormID(0x800), "qdx-get-wet.esp")->As<RE::TESQuest>();
+		m_QuestMain = handler->LookupForm(RE::FormID(0x800), "qdx-get-wet.esp")->As<RE::TESQuest>();
+		m_QuestConfig = handler->LookupForm(RE::FormID(0x801), "qdx-get-wet.esp")->As<RE::TESQuest>();
+	}
+
+	void RegisterSerial()
+	{
+		auto serial = SKSE::GetSerializationInterface();
+		if (!serial) {
+			logger::critical("Could not get serialization interface!");
+			return;
+		}
+
+		serial->SetUniqueID('QXGW');
+		serial->SetRevertCallback(SerialRevert);
+		serial->SetSaveCallback(SerialSave);
+		serial->SetLoadCallback(SerialLoad);
 	}
 }

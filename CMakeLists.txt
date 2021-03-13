@@ -96,15 +96,10 @@ endif()
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF)
 
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
-set(Boost_USE_DEBUG_RUNTIME ON)
+add_subdirectory("extern/CommonLibSSE" CommonLibSSE)
 
-add_subdirectory(extern/CommonLibSSE CommonLibSSE)
-
-find_package(spdlog REQUIRED)
-find_package(nlohmann_json REQUIRED)
+find_package(spdlog REQUIRED CONFIG)
+find_package(nlohmann_json REQUIRED CONFIG)
 
 # ---- Add source files ----
 
@@ -174,12 +169,6 @@ target_precompile_headers(
 )
 
 if (MSVC)
-	target_compile_options(
-		${PROJECT_NAME}
-		PRIVATE
-			/wd4324 # 'struct_name' : structure was padded due to __declspec(align())
-	)
-
 	target_link_options(
 		${PROJECT_NAME}
 		PRIVATE

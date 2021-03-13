@@ -10,7 +10,7 @@ namespace Event
 		task->AddTask([a_id] {
 			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(a_id);
 			if (actor) {
-				Actor::UpdateActor(actor);
+				//Actor::UpdateActor(*actor);
 			}
 		});
 	}
@@ -29,7 +29,7 @@ namespace Event
 			if (!a_event || !a_event->loaded)
 				return EventResult::kContinue;
 
-			Update(a_event->formID);
+			//Update(a_event->formID);
 
 			return EventResult::kContinue;
 		}
@@ -64,7 +64,7 @@ namespace Event
 				return EventResult::kContinue;
 
 			if (form->Is(RE::FormType::Armor) || form->Is(RE::FormType::Armature)) {
-				Update(actor->GetFormID());
+				//Update(actor->GetFormID());
 			}
 
 			return EventResult::kContinue;
@@ -83,8 +83,6 @@ namespace Event
 	class MenuOpenCloseEventHandler : public RE::BSTEventSink<RE::MenuOpenCloseEvent>
 	{
 	public:
-		using EventResult = RE::BSEventNotifyControl;
-
 		static MenuOpenCloseEventHandler* GetSingleton()
 		{
 			static MenuOpenCloseEventHandler singleton;
@@ -100,7 +98,7 @@ namespace Event
 					if (!a_event->opening) {
 						auto player = RE::PlayerCharacter::GetSingleton();
 						if (player) {
-							Actor::UpdateActor(player);
+							//Actor::UpdateActor(*player);
 						}
 					}
 				}
@@ -117,6 +115,29 @@ namespace Event
 		MenuOpenCloseEventHandler& operator=(const MenuOpenCloseEventHandler&) = delete;
 		MenuOpenCloseEventHandler& operator=(MenuOpenCloseEventHandler&&) = delete;
 	};
+	/*
+	class AnimationEventHandler : public RE::BSTEventSink<RE::BGSFootstepEvent>
+	{
+	public:
+		static AnimationEventHandler* GetSingleton()
+		{
+			static AnimationEventHandler singleton;
+			return std::addressof(singleton);
+		}
+
+		virtual EventResult ProcessEvent(const RE::BGSFootstepEvent* a_event, RE::BSTEventSource<RE::BGSFootstepEvent>*)
+		{
+			if (!a_event)
+				return EventResult::kContinue;
+
+			auto actor = a_event->actor.get().get();
+			if (actor) {
+				logger::info("Footstep: {}", actor->GetName());
+			}
+
+			return EventResult::kContinue;
+		}
+	};*/
 
 	void Register()
 	{
@@ -124,6 +145,7 @@ namespace Event
 		if (events) {
 			events->AddEventSink(ObjectLoadedEventHandler::GetSingleton());
 			events->AddEventSink(EquipEventHandler::GetSingleton());
+			//events->AddEventSink(AnimationEventHandler::GetSingleton());
 		}
 
 		auto ui = RE::UI::GetSingleton();

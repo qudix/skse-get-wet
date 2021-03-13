@@ -3,13 +3,11 @@
 #include "SKSE/SKSE.h"
 #include "RE/Skyrim.h"
 
-#include <type_traits>
-#include <charconv>
-
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 
-using json = nlohmann::json;
+// using float instead of double
+using json = nlohmann::basic_json<nlohmann::ordered_map, std::vector, std::string, bool, std::int64_t, std::uint64_t, float>;
 
 namespace WinAPI = SKSE::WinAPI;
 
@@ -57,4 +55,4 @@ using namespace std::literals;
 #define DLLEXPORT __declspec(dllexport)
 
 #include "Version.h"
-#include "Settings/Settings.h"
+#include "Settings.h"
