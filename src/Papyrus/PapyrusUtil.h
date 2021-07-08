@@ -1,21 +1,23 @@
 #pragma once
 
-namespace Papyrus::PapyrusUtil
+namespace PapyrusUtil
 {
 	using VM = RE::BSScript::IVirtualMachine;
 
-	inline void PrintConsole(RE::StaticFunctionTag*, std::string a_message)
+	void PrintConsole(RE::StaticFunctionTag*, std::string a_msg)
 	{
 		const auto log = RE::ConsoleLog::GetSingleton();
 		if (log) {
-			log->Print(a_message.c_str());
+			log->Print(a_msg.c_str());
 		}
 	}
 
-	inline void Bind(VM& a_vm)
+	bool Bind(VM* a_vm)
 	{
 		const auto obj = "qdx_gw"sv;
 
 		BIND(PrintConsole);
+
+		return true;
 	}
 }

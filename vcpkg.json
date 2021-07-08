@@ -2,7 +2,7 @@
     "name": "get-wet",
     "version-string": "0.0.0",
     "description": "Native extension for the mod Get Wet",
-    "homepage": "https://github.com/Ryan-rsm-McKenzie/CommonLibSSE",
+    "homepage": "https://github.com/Qudix/GetWet-SKSE",
     "license": "MIT",
     "dependencies": [
       "boost-stl-interfaces",

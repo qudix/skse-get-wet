@@ -10,7 +10,8 @@ namespace Event
 		task->AddTask([a_id] {
 			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(a_id);
 			if (actor) {
-				//Actor::UpdateActor(*actor);
+				auto& meta = Meta::GetSingleton();
+				meta.UpdateActor(actor);
 			}
 		});
 	}
@@ -29,7 +30,7 @@ namespace Event
 			if (!a_event || !a_event->loaded)
 				return EventResult::kContinue;
 
-			//Update(a_event->formID);
+			Update(a_event->formID);
 
 			return EventResult::kContinue;
 		}
@@ -64,7 +65,7 @@ namespace Event
 				return EventResult::kContinue;
 
 			if (form->Is(RE::FormType::Armor) || form->Is(RE::FormType::Armature)) {
-				//Update(actor->GetFormID());
+				Update(actor->GetFormID());
 			}
 
 			return EventResult::kContinue;
@@ -98,7 +99,8 @@ namespace Event
 					if (!a_event->opening) {
 						auto player = RE::PlayerCharacter::GetSingleton();
 						if (player) {
-							//Actor::UpdateActor(*player);
+							auto& meta = Meta::GetSingleton();
+							meta.UpdateActor(player);
 						}
 					}
 				}

@@ -1,158 +1,142 @@
 #pragma once
 
-namespace Papyrus::PapyrusActor
+namespace PapyrusActor
 {
 	using VM = RE::BSScript::IVirtualMachine;
 
-	inline void Update(RE::StaticFunctionTag*)
+	constexpr const char* CLASS_MCM = "qdx_gw_QuestMCM";
+
+	void Update(RE::StaticFunctionTag*)
 	{
-		Actor::Update();
+		auto& meta = Meta::GetSingleton();
+		meta.Update();
 	}
 
-	inline void UpdateActor(RE::StaticFunctionTag*, RE::Actor* a_actor)
+	void UpdateActor(RE::StaticFunctionTag*, RE::Actor* a_actor)
 	{
 		if (!a_actor)
 			return;
 
-		Actor::UpdateActor(*a_actor);
+		auto& meta = Meta::GetSingleton();
+		meta.UpdateActor(a_actor);
 	}
 
-	inline std::vector<RE::Actor*> GetActorList(RE::StaticFunctionTag*)
+	void GetActorList(RE::StaticFunctionTag*)
 	{
-		std::vector<RE::Actor*> vec;
+		auto& meta = Meta::GetSingleton();
+		auto obj = stl::get(meta.m_QuestMCM, CLASS_MCM);
+		if (!obj)
+			return;
 
-		for (auto& data : Actor::m_ActorData) {
-			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(data.first);
-			if (actor) {
-				if (actor->IsPlayerRef())
-					vec.insert(vec.begin(), actor);
-				else
-					vec.push_back(actor);
-			}
-		}
+		std::vector<RE::Actor*> actors;
+		std::vector<std::string> names;
 
-		return vec;
-	}
-
-	inline std::vector<RE::BSFixedString> GetActorNameList(RE::StaticFunctionTag*)
-	{
-		std::vector<RE::BSFixedString> vec;
-		for (auto& data : Actor::m_ActorData) {
-			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(data.first);
+		for (auto& [formID, data] : meta.m_MetaData) {
+			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(formID);
 			if (actor) {
 				auto name = actor->GetName();
-				if (actor->IsPlayerRef())
-					vec.insert(vec.begin(), name);
-				else
-					vec.push_back(name);
-			}
-		}
-
-		return vec;
-	}
-
-	inline std::vector<float> GetActorFloatSettings(RE::StaticFunctionTag*, RE::Actor* a_actor)
-	{
-		if (!a_actor)
-			return {};
-
-		std::vector<float> vec;
-		for (auto& entry : Actor::m_ActorData) {
-			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(entry.first);
-			if (actor == a_actor) {
-				auto& data = entry.second;
-				if (data.IsCustom()) {
-					vec = data.GetVisual();
+				if (actor->IsPlayerRef()) {
+					actors.insert(actors.begin(), actor);
+					names.insert(names.begin(), name);
+				} else {
+					actors.push_back(actor);
+					names.push_back(name);
 				}
-				break;
 			}
 		}
 
-		return vec;
+		stl::set(obj, "ActorList", actors);
+		stl::set(obj, "ActorNameList", names);
 	}
 
-	inline void SetActorFloatSetting(RE::StaticFunctionTag*, RE::Actor* a_actor, std::string a_key, float a_value)
+	void AddActorPreset(RE::StaticFunctionTag*, RE::Actor* a_actor)
 	{
 		if (!a_actor)
 			return;
 
-		auto actor_id = Util::FormToString(a_actor);
-		if (!actor_id)
+		auto& prs = Presets::GetSingleton();
+		prs.AddPreset(a_actor);
+	}
+
+	void RemoveActorPreset(RE::StaticFunctionTag*, RE::Actor* a_actor)
+	{
+		if (!a_actor)
 			return;
 
-		auto set = Settings::GetSingleton();
-		auto& actors = set->data.Actors;
-		auto it = std::find_if(actors.begin(), actors.end(), [&](const auto& a_obj) {
-			return !a_obj.Actor.empty() && (a_obj.Actor == actor_id);
-		});
+		auto& prs = Presets::GetSingleton();
+		prs.RemovePreset(a_actor);
+	}
 
-		if (it != actors.end()) {
-			json obj = *it;
-			obj[a_key] = a_value;
-			*it = obj;
-			set->Save();
+	bool GetActorPreset(RE::StaticFunctionTag*, RE::Actor* a_actor)
+	{
+		if (!a_actor)
+			return false;
+
+		auto& meta = Meta::GetSingleton();
+		auto obj = stl::get(meta.m_QuestMCM, CLASS_MCM);
+		if (!obj)
+			return false;
+
+		auto& prs = Presets::GetSingleton();
+		auto it = prs.presets.find(a_actor->GetFormID());
+		if (it != prs.presets.end()) {
+			auto& preset = it->second;
+			stl::set<float>(obj, "ActorWetnessMin", preset.WetnessMin);
+			stl::set<float>(obj, "ActorWetnessMax", preset.WetnessMax);
+			stl::set<float>(obj, "ActorGlossinessMin", preset.GlossinessMin);
+			stl::set<float>(obj, "ActorGlossinessMax", preset.GlossinessMax);
+			stl::set<float>(obj, "ActorSpecularMin", preset.SpecularMin);
+			stl::set<float>(obj, "ActorSpecularMax", preset.SpecularMax);
+			stl::set<bool>(obj, "ActorForceWetness", preset.ForceWetness);
+			stl::set<bool>(obj, "ActorForceGlossiness", preset.ForceGlossiness);
+			stl::set<bool>(obj, "ActorForceSpecular", preset.ForceSpecular);
+			return true;
 		}
+
+		return false;
 	}
 
-	inline void AddActorSettings(RE::StaticFunctionTag*, RE::Actor* a_actor)
+	void SetActorPreset(RE::StaticFunctionTag*, RE::Actor* a_actor)
 	{
 		if (!a_actor)
 			return;
 
-		auto actor_id = Util::FormToString(a_actor);
-		if (!actor_id)
+		auto& meta = Meta::GetSingleton();
+		auto obj = stl::get(meta.m_QuestMCM, CLASS_MCM);
+		if (!obj)
 			return;
 
-		auto set = Settings::GetSingleton();
-		auto& data = set->data;
-
-		Actor_t obj;
-		obj.Actor = *actor_id;
-		obj.Wetness = data.Wetness.Min;
-		obj.Glossiness = data.Glossiness.Min;
-		obj.Specular = data.Specular.Min;
-
-		auto& actors = data.Actors;
-		if (a_actor->IsPlayerRef())
-			actors.insert(actors.begin(), obj);
-		else
-			actors.push_back(obj);
-
-		set->Save();
-	}
-
-	inline void RemoveActorSettings(RE::StaticFunctionTag*, RE::Actor* a_actor)
-	{
-		if (!a_actor)
-			return;
-
-		auto actor_id = Util::FormToString(a_actor);
-		if (!actor_id)
-			return;
-
-		auto set = ::Settings::GetSingleton();
-		auto& actors = set->data.Actors;
-		auto it = std::find_if(actors.begin(), actors.end(), [&](const auto& a_obj) {
-			return !a_obj.Actor.empty() && (a_obj.Actor == actor_id);
-		});
-
-		if (it != actors.end()) {
-			actors.erase(it);
-			set->Save();
+		auto& prs = Presets::GetSingleton();
+		auto it = prs.presets.find(a_actor->GetFormID());
+		if (it != prs.presets.end()) {
+			auto& preset = it->second;
+			preset.WetnessMin = stl::get<float>(obj, "ActorWetnessMin");
+			preset.WetnessMax = stl::get<float>(obj, "ActorWetnessMax");
+			preset.GlossinessMin = stl::get<float>(obj, "ActorGlossinessMin");
+			preset.GlossinessMax = stl::get<float>(obj, "ActorGlossinessMax");
+			preset.SpecularMin = stl::get<float>(obj, "ActorSpecularMin");
+			preset.SpecularMax = stl::get<float>(obj, "ActorSpecularMax");
+			preset.ForceWetness = stl::get<bool>(obj, "ActorForceWetness");
+			preset.ForceGlossiness = stl::get<bool>(obj, "ActorForceGlossiness");
+			preset.ForceSpecular = stl::get<bool>(obj, "ActorForceSpecular");
 		}
+
+		// TODO: Allow user to decide to save?
+		prs.Save();
 	}
 
-	inline void Bind(VM& a_vm)
+	bool Bind(VM* a_vm)
 	{
 		const auto obj = "qdx_gw"sv;
 
 		BIND(Update);
 		BIND(UpdateActor);
 		BIND(GetActorList);
-		BIND(GetActorNameList);
-		BIND(GetActorFloatSettings);
-		BIND(SetActorFloatSetting);
-		BIND(AddActorSettings);
-		BIND(RemoveActorSettings);
+		BIND(AddActorPreset);
+		BIND(RemoveActorPreset);
+		BIND(GetActorPreset);
+		BIND(SetActorPreset);
+
+		return true;
 	}
 }
