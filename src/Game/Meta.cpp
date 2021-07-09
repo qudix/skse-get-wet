@@ -151,7 +151,7 @@ bool Meta::CleanActor(RE::Actor* a_actor)
 
 void Meta::UpdateActor(RE::Actor* a_actor, bool a_force)
 {
-	if (!m_QuestMain || !m_QuestMain->IsRunning())
+	if (!m_QuestMain || !m_QuestMain->IsEnabled())
 		return;
 
 	bool valid = IsValidActor(a_actor);
@@ -174,7 +174,7 @@ void Meta::UpdateActor(RE::Actor* a_actor, bool a_force)
 
 void Meta::Update()
 {
-	if (!m_QuestMain || !m_QuestMain->IsRunning())
+	if (!m_QuestMain || !m_QuestMain->IsEnabled())
 		return;
 
 	auto player = RE::PlayerCharacter::GetSingleton();

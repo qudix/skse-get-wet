@@ -117,6 +117,7 @@ namespace Event
 		MenuOpenCloseEventHandler& operator=(const MenuOpenCloseEventHandler&) = delete;
 		MenuOpenCloseEventHandler& operator=(MenuOpenCloseEventHandler&&) = delete;
 	};
+
 	/*
 	class AnimationEventHandler : public RE::BSTEventSink<RE::BGSFootstepEvent>
 	{
