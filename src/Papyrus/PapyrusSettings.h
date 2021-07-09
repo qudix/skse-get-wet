@@ -35,7 +35,7 @@ namespace PapyrusSettings
 		auto& cfg = Config::GetSingleton();
 		json data = cfg.data;
 		for (auto& item : data.items()) {
-			auto value = item.value();
+			auto& value = item.value();
 			if (value.is_boolean()) {
 				value = stl::get<bool>(obj, item.key());
 			} else if (value.is_number_float()) {
