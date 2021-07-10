@@ -4,10 +4,10 @@
 
 namespace Serialization
 {
+	constexpr std::size_t SIZE = sizeof(uint32_t);
+
 	std::string DecodeType(uint32_t a_typeCode)
 	{
-		constexpr std::size_t SIZE = sizeof(uint32_t);
-
 		std::string sig;
 		sig.resize(SIZE);
 		char* iter = reinterpret_cast<char*>(&a_typeCode);

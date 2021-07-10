@@ -34,11 +34,10 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
 	auto path = logger::log_directory();
-	if (!path) {
+	if (!path)
 		return false;
-	}
 
-	*path /= "GetWet.log"sv;
+	*path /= fmt::format(FMT_STRING("{}.log"), Version::PROJECT);
 	auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
 	auto log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
 
