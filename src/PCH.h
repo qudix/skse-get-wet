@@ -1,7 +1,10 @@
 #pragma once
 
+#pragma warning(push)
+#pragma warning(disable: 4200)
 #include "SKSE/SKSE.h"
 #include "RE/Skyrim.h"
+#pragma warning(pop)
 
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/basic_file_sink.h>

@@ -170,9 +170,6 @@ if (MSVC)
 			/Zc:trigraphs			# Trigraphs Substitution
 			/Zc:wchar_t				# wchar_t Is Native Type
 
-			/external:anglebrackets
-			/external:W0
-
 			/W4	# Warning level (all warnings)
 			/WX	# Warning level (warnings are errors)
 
