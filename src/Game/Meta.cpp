@@ -64,7 +64,7 @@ void Meta::Setup()
 	m_QuestMCM = handler->LookupForm(RE::FormID(0x802), mod)->As<RE::TESQuest>();
 }
 
-MetaData* Meta::GetMetaData(RE::FormID& a_formID, bool a_create)
+MetaData* Meta::GetMetaData(RE::FormID a_formID, bool a_create)
 {
 	if (m_LastFormID == a_formID && m_LastMetaData)
 		return m_LastMetaData;
@@ -85,6 +85,11 @@ MetaData* Meta::GetMetaData(RE::FormID& a_formID, bool a_create)
 	}
 
 	return nullptr;
+}
+
+MetaData* Meta::GetMetaData(RE::Actor* a_actor, bool a_create)
+{
+	return a_actor ? GetMetaData(a_actor->GetFormID(), a_create) : nullptr;
 }
 
 bool IsValidActor(RE::Actor* a_actor)
@@ -137,8 +142,7 @@ bool Meta::CleanActor(RE::Actor* a_actor)
 {
 	auto valid = IsValidEffect(a_actor);
 	if (!valid) {
-		auto formID = a_actor->GetFormID();
-		auto it = m_MetaData.find(formID);
+		auto it = m_MetaData.find(a_actor->GetFormID());
 		if (it != m_MetaData.end()) {
 			it->second.Update(true);
 			m_MetaData.erase(it);
@@ -164,8 +168,7 @@ void Meta::UpdateActor(RE::Actor* a_actor, bool a_force)
 
 	auto& data = Config::GetSingleton().data;
 	if (a_force || data.ApplyGlobal) {
-		auto formID = a_actor->GetFormID();
-		auto metaData = GetMetaData(formID, true);
+		auto metaData = GetMetaData(a_actor, true);
 		if (metaData) {
 			metaData->Update();
 		}

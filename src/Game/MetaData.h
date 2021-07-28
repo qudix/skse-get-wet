@@ -22,12 +22,14 @@ public:
 	void SetFormID(RE::FormID& a_formID) { m_FormID = a_formID; };
 	RE::FormID GetFormID() { return m_FormID; };
 
-private:
+public:
 	RE::FormID m_FormID;
 
 	// Active
 	float m_Wetness = 0;
 	float m_WetnessRate = 0;
+	float m_Glossiness = 0;
+	float m_Specular = 0;
 
 	// Default/Custom
 	float m_WetnessMin{ 0 };

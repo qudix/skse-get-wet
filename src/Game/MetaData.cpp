@@ -8,6 +8,8 @@ bool MetaData::Save(SKSE::SerializationInterface* a_intfc)
 {
 	stl::write(a_intfc, &m_Wetness);
 	stl::write(a_intfc, &m_WetnessRate);
+	stl::write(a_intfc, &m_Glossiness);
+	stl::write(a_intfc, &m_Specular);
 	return true;
 }
 
@@ -15,6 +17,8 @@ void MetaData::Load(SKSE::SerializationInterface* a_intfc, uint32_t& a_length)
 {
 	m_Wetness = stl::read<float>(a_intfc, a_length);
 	m_WetnessRate = stl::read<float>(a_intfc, a_length);
+	m_Glossiness = stl::read<float>(a_intfc, a_length);
+	m_Specular = stl::read<float>(a_intfc, a_length);
 }
 
 void MetaData::ApplyProperties(RE::NiAVObject* a_obj, bool a_glossiness, bool a_specular)
@@ -38,9 +42,9 @@ void MetaData::ApplyProperties(RE::NiAVObject* a_obj, bool a_glossiness, bool a_
 		auto type = material->GetFeature();
 		if (type == Feature::kFaceGenRGBTint || type == Feature::kFaceGen) {
 			if (a_glossiness)
-				material->specularPower = m_GlossinessMin;
+				material->specularPower = m_Glossiness;
 			if (a_specular)
-				material->specularColorScale = m_SpecularMin;
+				material->specularColorScale = m_Specular;
 		}
 
 		return Visit::kContinue;
@@ -124,6 +128,11 @@ void MetaData::Update(bool a_reset)
 		m_SpecularMin = data.SpecularMin;
 		m_SpecularMax = data.SpecularMax;
 	}
+
+	// TODO: Calculate this dynamically
+	m_Wetness = m_WetnessMin;
+	m_Glossiness = m_GlossinessMin;
+	m_Specular = m_SpecularMin;
 
 	Apply(actor);
 }

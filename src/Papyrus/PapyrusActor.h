@@ -49,6 +49,24 @@ namespace PapyrusActor
 		stl::set(obj, "ActorNameList", names);
 	}
 
+	void GetActorMeta(RE::StaticFunctionTag*, RE::Actor* a_actor)
+	{
+		if (!a_actor)
+			return;
+
+		auto& meta = Meta::GetSingleton();
+		auto obj = stl::get(meta.m_QuestMCM, CLASS_MCM);
+		if (!obj)
+			return;
+
+		auto metaData = meta.GetMetaData(a_actor);
+		if (metaData) {
+			stl::set<float>(obj, "ActorWetness", metaData->m_Wetness);
+			stl::set<float>(obj, "ActorGlossiness", metaData->m_Glossiness);
+			stl::set<float>(obj, "ActorSpecular", metaData->m_Specular);
+		}
+	}
+
 	void AddActorPreset(RE::StaticFunctionTag*, RE::Actor* a_actor)
 	{
 		if (!a_actor)
@@ -132,6 +150,7 @@ namespace PapyrusActor
 		BIND(Update);
 		BIND(UpdateActor);
 		BIND(GetActorList);
+		BIND(GetActorMeta);
 		BIND(AddActorPreset);
 		BIND(RemoveActorPreset);
 		BIND(GetActorPreset);

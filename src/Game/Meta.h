@@ -14,7 +14,8 @@ public:
 
 	void Setup();
 
-	MetaData* GetMetaData(RE::FormID& a_formID, bool a_create = false);
+	MetaData* GetMetaData(RE::FormID a_formID, bool a_create = false);
+	MetaData* GetMetaData(RE::Actor* a_actor, bool a_create = false);
 
 	bool CleanActor(RE::Actor* a_actor);
 	void UpdateActor(RE::Actor* a_actor, bool a_force = false);
