@@ -1,33 +1,28 @@
-#include "Game/Config.h"
 #include "Game/Meta.h"
-#include "Game/Presets.h"
+#include "Game/Event.h"
 #include "Papyrus/Papyrus.h"
-#include "Serialization/Manager.h"
-#include "Serialization/Event.h"
+#include "Serial/Manager.h"
+#include "Store/PresetStore.h"
+#include "Store/SettingStore.h"
 
-void OnInit(SKSE::MessagingInterface::Message* a_msg)
+void OnMessage(SKSE::MessagingInterface::Message* a_msg)
 {
 	if (a_msg->type == SKSE::MessagingInterface::kDataLoaded) {
-		// Config
-		auto& config = Config::GetSingleton();
-		if (!config.Load()) {
-			logger::info("Config did not load correctly");
-			return;
-		}
+		// Settings
+		auto& setting = SettingStore::GetSingleton();
+		setting.Load();
 
 		// Presets
-		auto& presets = Presets::GetSingleton();
-		if (!presets.Load()) {
-			logger::info("Presets did not load correctly");
-			return;
-		}
+		auto& presets = PresetStore::GetSingleton();
+		presets.Load();
 
 		// Meta
 		auto& meta = Meta::GetSingleton();
 		meta.Setup();
 
-		// Event
-		Event::Register();
+		// Events
+		Event::ScriptEventHandler::Register();
+		Event::UIEventHandler::Register();
 	}
 }
 
@@ -70,10 +65,12 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
 {
 	SKSE::Init(a_skse);
-	Papyrus::Bind();
+
+	auto papyrus = SKSE::GetPapyrusInterface();
+	papyrus->Register(Papyrus::Bind);
 
 	const auto messaging = SKSE::GetMessagingInterface();
-	messaging->RegisterListener("SKSE", OnInit);
+	messaging->RegisterListener("SKSE", OnMessage);
 
 	const auto serial = SKSE::GetSerializationInterface();
 	serial->SetUniqueID(Serialization::kGetWet);

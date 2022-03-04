@@ -1,24 +1,25 @@
-#include "MetaData.h"
+#include "Game/MetaData.h"
 
-#include "Game/Config.h"
-#include "Game/Presets.h"
+#include "Serial/Serial.h"
+#include "Store/PresetStore.h"
+#include "Store/SettingStore.h"
 #include "Util.h"
 
 bool MetaData::Save(SKSE::SerializationInterface* a_intfc)
 {
-	stl::write(a_intfc, &m_Wetness);
-	stl::write(a_intfc, &m_WetnessRate);
-	stl::write(a_intfc, &m_Glossiness);
-	stl::write(a_intfc, &m_Specular);
+	Serial::Write(a_intfc, &m_Wetness);
+	Serial::Write(a_intfc, &m_WetnessRate);
+	Serial::Write(a_intfc, &m_Glossiness);
+	Serial::Write(a_intfc, &m_Specular);
 	return true;
 }
 
 void MetaData::Load(SKSE::SerializationInterface* a_intfc, uint32_t& a_length)
 {
-	m_Wetness = stl::read<float>(a_intfc, a_length);
-	m_WetnessRate = stl::read<float>(a_intfc, a_length);
-	m_Glossiness = stl::read<float>(a_intfc, a_length);
-	m_Specular = stl::read<float>(a_intfc, a_length);
+	m_Wetness = Serial::Read<float>(a_intfc, a_length);
+	m_WetnessRate = Serial::Read<float>(a_intfc, a_length);
+	m_Glossiness = Serial::Read<float>(a_intfc, a_length);
+	m_Specular = Serial::Read<float>(a_intfc, a_length);
 }
 
 void MetaData::ApplyProperties(RE::NiAVObject* a_obj, bool a_glossiness, bool a_specular)
@@ -79,31 +80,30 @@ void MetaData::ApplySlot(RE::Actor* a_actor, BipedSlot a_slot, bool a_glossiness
 
 void MetaData::Apply(RE::Actor* a_actor)
 {
-	auto& data = Config::GetSingleton().data;
+	auto& setting = SettingStore::GetSingleton().Get();
 	auto kUnnamed52 = static_cast<BipedSlot>(1 << 22); // SOS?
-	ApplyHead(a_actor, data.GlossinessHead, data.SpecularHead);
-	ApplySlot(a_actor, BipedSlot::kBody, data.SpecularBody, data.SpecularBody);
-	ApplySlot(a_actor, BipedSlot::kHands, data.GlossinessHands, data.SpecularHands);
-	ApplySlot(a_actor, BipedSlot::kFeet, data.GlossinessFeet, data.SpecularFeet);
-	ApplySlot(a_actor, kUnnamed52, data.GlossinessOther, data.SpecularOther);
+	ApplyHead(a_actor, setting.GlossinessHead, setting.SpecularHead);
+	ApplySlot(a_actor, BipedSlot::kBody, setting.GlossinessBody, setting.SpecularBody);
+	ApplySlot(a_actor, BipedSlot::kHands, setting.GlossinessHands, setting.SpecularHands);
+	ApplySlot(a_actor, BipedSlot::kFeet, setting.GlossinessFeet, setting.SpecularFeet);
+	ApplySlot(a_actor, kUnnamed52, setting.GlossinessOther, setting.SpecularOther);
 }
 
 bool MetaData::UpdatePreset(RE::Actor* a_actor)
 {
-	auto& data = Config::GetSingleton().data;
-	auto& presets = Presets::GetSingleton().presets;
-	auto it = presets.find(a_actor->GetFormID());
-	if (it != presets.end()) {
-		auto& preset = it->second;
-		m_ForceWetness = preset.ForceWetness;
-		m_ForceGlossiness = preset.ForceGlossiness;
-		m_ForceSpecular = preset.ForceSpecular;
-		m_WetnessMin = m_ForceWetness ? preset.WetnessMin : data.WetnessMin;
-		m_WetnessMax = m_ForceWetness ? preset.WetnessMax : data.WetnessMax;
-		m_GlossinessMin = m_ForceGlossiness ? preset.GlossinessMin : data.GlossinessMin;
-		m_GlossinessMax = m_ForceGlossiness ? preset.GlossinessMax : data.GlossinessMax;
-		m_SpecularMin = m_ForceSpecular ? preset.SpecularMin : data.SpecularMin;
-		m_SpecularMax = m_ForceSpecular ? preset.SpecularMax : data.SpecularMax;
+	auto& setting = SettingStore::GetSingleton().Get();
+	auto& presets = PresetStore::GetSingleton();
+	auto preset = presets.Find(a_actor->GetFormID());
+	if (preset) {
+		m_WetnessForced = preset->WetnessForced;
+		m_WetnessMin = m_WetnessForced ? preset->WetnessMin : setting.WetnessMin;
+		m_WetnessMax = m_WetnessForced ? preset->WetnessMax : setting.WetnessMax;
+		m_GlossinessForced = preset->GlossinessForced;
+		m_GlossinessMin = m_GlossinessForced ? preset->GlossinessMin : setting.GlossinessMin;
+		m_GlossinessMax = m_GlossinessForced ? preset->GlossinessMax : setting.GlossinessMax;
+		m_SpecularForced = preset->SpecularForced;
+		m_SpecularMin = m_SpecularForced ? preset->SpecularMin : setting.SpecularMin;
+		m_SpecularMax = m_SpecularForced ? preset->SpecularMax : setting.SpecularMax;
 		return true;
 	}
 
@@ -117,16 +117,16 @@ void MetaData::Update(bool a_reset)
 		return;
 
 	if (a_reset || !UpdatePreset(actor)) {
-		auto& data = Config::GetSingleton().data;
-		m_ForceWetness = false;
-		m_ForceGlossiness = false;
-		m_ForceSpecular = false;
-		m_WetnessMin = data.WetnessMin;
-		m_WetnessMax = data.WetnessMax;
-		m_GlossinessMin = data.GlossinessMin;
-		m_GlossinessMax = data.GlossinessMax;
-		m_SpecularMin = data.SpecularMin;
-		m_SpecularMax = data.SpecularMax;
+		auto& setting = SettingStore::GetSingleton().Get();
+		m_WetnessMin = setting.WetnessMin;
+		m_WetnessMax = setting.WetnessMax;
+		m_WetnessForced = false;
+		m_GlossinessMin = setting.GlossinessMin;
+		m_GlossinessMax = setting.GlossinessMax;
+		m_GlossinessForced = false;
+		m_SpecularMin = setting.SpecularMin;
+		m_SpecularMax = setting.SpecularMax;
+		m_SpecularForced = false;
 	}
 
 	// TODO: Calculate this dynamically

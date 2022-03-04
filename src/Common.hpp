@@ -30,26 +30,24 @@ namespace Util
 		if (pos == std::string_view::npos)
 			return nullptr;
 
-		auto ext = str.ends_with(".esp"sv) || str.ends_with(".esm"sv) || str.ends_with(".esl"sv);
+		std::string_view mod = str.substr(0, pos);
+		auto ext = mod.ends_with(".esp"sv) || mod.ends_with(".esm"sv) || mod.ends_with(".esl"sv);
 		if (!ext)
 			return nullptr;
 
-		std::string_view fid = str.substr(0, pos);
-		std::string_view mod = str.substr(pos + 1);
+		std::string_view fid = str.substr(pos + 1);
 		auto handler = RE::TESDataHandler::GetSingleton();
 		auto file = handler->LookupModByName(mod);
 
-		RE::FormID index = 0xFF;
-		if (file)
-			index = file->GetPartialIndex();
-
+		RE::FormID index = file ? file->GetPartialIndex() : 0xFF;
 		RE::FormID id = std::stoul(std::string(fid), nullptr, 16);
+		logger::info("id: {:0x}", id);
 		if (index < 0xFF)
 			id = (index << 24) | id;
 		else
 			id = (index << 12) | (id & 0x00000FFF);
 
-		return id ? RE::TESForm::LookupByID(id) : nullptr;
+		return RE::TESForm::LookupByID(id);
 	}
 
 	inline std::string AsString(RE::TESForm* a_form)
@@ -58,8 +56,6 @@ namespace Util
 			return {};
 
 		std::stringstream ss;
-		ss << std::hex << GetBaseID(a_form) << "|";
-
 		auto handler = RE::TESDataHandler::GetSingleton();
 		auto index = GetModIndex(a_form);
 		if (index < 0xFF) {
@@ -70,10 +66,14 @@ namespace Util
 			ss << file->fileName;
 		}
 
+		ss << "|" << std::hex << GetBaseID(a_form);
+
 		return ss.str();
 	}
 
-	inline void VisitArmorAddon(RE::Actor* a_actor, RE::TESObjectARMO* a_armor, RE::TESObjectARMA* a_arma, std::function<void(bool a_firstPerson, RE::NiAVObject& a_obj)> a_visitor)
+	// Version 1
+	/*
+	inline void VisitArmorAddon(RE::Actor* a_actor, RE::TESObjectARMO* a_armor, RE::TESObjectARMA* a_arma, std::function<void(bool, RE::NiAVObject&)> a_visitor)
 	{
 		enum
 		{
@@ -96,6 +96,25 @@ namespace Util
 				}
 			}
 		}
+	}*/
+
+	// Version 2
+	inline void VisitArmorAddon(RE::Actor* a_actor, RE::TESObjectARMO* a_armor, RE::TESObjectARMA* a_arma, std::function<void(bool, RE::NiAVObject&)> a_visitor)
+	{
+		char addonString[WinAPI::MAX_PATH]{ '\0' };
+		a_arma->GetNodeName(addonString, a_actor, a_armor, -1);
+		const auto third = a_actor->Get3D();
+		const auto first = a_actor->Get3D(true);
+
+		auto obj = third ? third->GetObjectByName(addonString) : nullptr;
+		if (obj) {
+			a_visitor(false, *obj);
+		}
+
+		obj = (first && first != third) ? first->GetObjectByName(addonString) : nullptr;
+		if (obj) {
+			a_visitor(true, *obj);
+		}
 	}
 
 	inline RE::TESObjectARMA* GetArmorAddonByMask(RE::TESObjectARMO* a_armo, RE::TESRace* a_race, RE::BGSBipedObjectForm::BipedObjectSlot a_slot)
@@ -107,5 +126,33 @@ namespace Util
 		}
 
 		return nullptr;
+	}
+
+	inline bool IsWithinRadius(RE::TESObjectREFR* a_centerObj, RE::TESObjectREFR* a_objRef, float a_radius)
+	{
+		if (a_radius <= 0.0f)
+			return false;
+
+		RE::NiPoint3 a = a_centerObj->GetPosition();
+		RE::NiPoint3 b = a_objRef->GetPosition();
+
+		float tempx = std::abs(a.x - b.x);
+		float tempy = std::abs(a.y - b.y);
+		float tempz = std::abs(a.z - b.z);
+
+		if (tempx + tempy + tempz < a_radius)
+			return true;  // very small distances
+		if (tempx + tempy + tempz > a_radius / 2)
+			return false;  // very large distances
+
+		tempx = tempx * tempx;
+		tempy = tempy * tempy;
+		tempz = tempz * tempz;
+
+		float tempd = a_radius * a_radius;
+		if (tempx + tempy + tempz < tempd)
+			return true;  // near but within distance
+
+		return false;
 	}
 }

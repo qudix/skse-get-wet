@@ -17,15 +17,17 @@ public:
 	MetaData* GetMetaData(RE::FormID a_formID, bool a_create = false);
 	MetaData* GetMetaData(RE::Actor* a_actor, bool a_create = false);
 
+	bool IsValidActor(RE::Actor* a_actor);
+	bool IsValidEffect(RE::Actor* a_actor);
+
 	bool CleanActor(RE::Actor* a_actor);
 	void UpdateActor(RE::Actor* a_actor, bool a_force = false);
 	void Update();
 
 public:
 	// Quest
-	RE::TESQuest* m_QuestMain{ nullptr };
-	RE::TESQuest* m_QuestConfig{ nullptr };
 	RE::TESQuest* m_QuestMCM{ nullptr };
+	RE::TESGlobal* m_ModEnabled { nullptr };
 
 	// Actor
 	RE::FormID m_LastFormID{ 0 };

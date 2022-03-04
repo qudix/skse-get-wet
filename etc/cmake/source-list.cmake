@@ -1,0 +1,21 @@
+set(CXX_FILES
+	src/Common.hpp
+	src/Core/Actor/Actor.cpp
+	src/Core/Actor/Actor.hpp
+	src/Core/Actor/ActorData.cpp
+	src/Core/Actor/ActorData.hpp
+	src/Core/Event/Event.cpp
+	src/Core/Event/Event.hpp
+	src/Core/Store/PresetStore.cpp
+	src/Core/Store/PresetStore.hpp
+	src/Core/Store/SettingStore.cpp
+	src/Core/Store/SettingStore.hpp
+	src/Main.cpp
+	src/PCH.hpp
+	src/Papyrus/Papyrus.cpp
+	src/Papyrus/Papyrus.hpp
+	src/Papyrus/Script.hpp
+	src/Serialization/Manager.cpp
+	src/Serialization/Manager.hpp
+	src/Serialization/Serialization.hpp
+)

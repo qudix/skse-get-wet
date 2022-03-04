@@ -34,11 +34,13 @@ public:
 	// Default/Custom
 	float m_WetnessMin{ 0 };
 	float m_WetnessMax{ 0 };
+	bool m_WetnessForced{ false };
+
 	float m_GlossinessMin{ 0 };
 	float m_GlossinessMax{ 0 };
+	bool m_GlossinessForced{ false };
+
 	float m_SpecularMin{ 0 };
 	float m_SpecularMax{ 0 };
-	bool m_ForceWetness{ false };
-	bool m_ForceGlossiness{ false };
-	bool m_ForceSpecular{ false };
+	bool m_SpecularForced{ false };
 };

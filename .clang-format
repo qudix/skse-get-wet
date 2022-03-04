@@ -1,4 +1,4 @@
-﻿---
+---
 AccessModifierOffset: -4
 AlignAfterOpenBracket: DontAlign
 AlignConsecutiveAssignments: 'false'
@@ -22,7 +22,7 @@ AlwaysBreakTemplateDeclarations: 'Yes'
 BinPackArguments: 'true'
 BinPackParameters: 'true'
 BraceWrapping:
-    AfterCaseLabel: 'true'
+    AfterCaseLabel: 'false'
     AfterClass: 'true'
     AfterControlStatement: 'false'
     AfterEnum: 'true'
@@ -55,7 +55,7 @@ DisableFormat: 'false'
 FixNamespaceComments: 'false'
 IncludeBlocks: Preserve
 IndentCaseBlocks: 'true'
-IndentCaseLabels: 'false'
+IndentCaseLabels: 'true'
 IndentGotoLabels: 'false'
 IndentPPDirectives: None
 IndentWidth: 4
@@ -66,7 +66,7 @@ MaxEmptyLinesToKeep: 2
 NamespaceIndentation: All
 PointerAlignment: Left
 ReflowComments : 'false'
-SortIncludes: 'true'
+SortIncludes: 'false'
 SortUsingDeclarations: 'true'
 SpaceAfterCStyleCast: 'false'
 SpaceAfterLogicalNot: 'false'
@@ -87,7 +87,7 @@ SpacesInConditionalStatement: 'false'
 SpacesInContainerLiterals: 'true'
 SpacesInParentheses: 'false'
 SpacesInSquareBrackets: 'false'
-Standard: c++17
+Standard: c++20
 TabWidth: 4
 UseCRLF: 'true'
 UseTab: Always
