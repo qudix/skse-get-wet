@@ -67,7 +67,7 @@ include(etc/cmake/source-list.cmake)
 
 source_group(
 	TREE "${CMAKE_CURRENT_SOURCE_DIR}"
-	FILES ${SOURCES}
+	FILES ${CXX_FILES}
 )
 
 source_group(
@@ -80,7 +80,7 @@ source_group(
 add_library(
 	"${PROJECT_NAME}"
 	SHARED
-		${SOURCES}
+		${CXX_FILES}
 		"${CMAKE_CURRENT_BINARY_DIR}/include/Plugin.hpp"
 		"${CMAKE_CURRENT_BINARY_DIR}/version.rc"
 		".clang-format"
