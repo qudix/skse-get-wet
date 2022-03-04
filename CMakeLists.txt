@@ -63,7 +63,7 @@ find_package(nlohmann_json REQUIRED CONFIG)
 
 # ---- Add source files ----
 
-include(etc/cmake/sourcelist.cmake)
+include(etc/cmake/source-list.cmake)
 
 source_group(
 	TREE "${CMAKE_CURRENT_SOURCE_DIR}"
